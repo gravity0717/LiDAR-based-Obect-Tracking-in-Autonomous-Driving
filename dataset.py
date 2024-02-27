@@ -26,8 +26,6 @@ class Dataset:
 
         velocity = self.datas["Vx_stack"][0][self.cur]
         
-        
-        
         image = self.datas["dash_cam_stack"][0][self.cur][0][0][0]
         image = np.flipud(image)
         image = np.fliplr(image)
@@ -38,7 +36,6 @@ class Dataset:
         pcd.points = o3d.utility.Vector3dVector(xyz.T)
         
         o3d_image = o3d.geometry.Image(image)
-        
         
         self.cur += 1
         return pcd, o3d_image, left_line_poly, right_line_poly, velocity

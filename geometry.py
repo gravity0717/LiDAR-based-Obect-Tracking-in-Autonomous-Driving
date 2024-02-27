@@ -25,7 +25,6 @@ class Geometry:
         self.widget3d.scene.add_geometry(name, car, Material.default)
         self.widget3d.scene.set_geometry_transform(name, pose)
     
-    
     def draw_spline(self, name, a, b, c, color=[1.0, 0.0, 0.0], min=-30, max=30):
         
         self.remove_geometry(name)
@@ -39,7 +38,6 @@ class Geometry:
         ])
         spline.paint_uniform_color(color)
         self.widget3d.scene.add_geometry(name, spline, Material.default)
-    
     
     def draw_primitives(self):
 
@@ -58,3 +56,18 @@ class Geometry:
     def remove_geometry(self, name):
         if self.widget3d.scene.has_geometry(name):
             self.widget3d.scene.remove_geometry(name)
+    
+    def add_text(self, coord, text):
+        text_mesh = o3d.t.geometry.TriangleMesh.create_text(text, depth=0.1)    
+        
+        # Scale and transform the text : make it smaller and move it to the right position
+        text_mesh.scale(0.1, center=text_mesh.get_center())
+        
+        # Check numpy is not empty 
+        if np.any(coord):
+            text_mesh.translate(coord)  
+            # 90 degrees rotation around the z-axis
+            R = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]])
+            text_mesh.rotate(R, center=coord)
+            
+        self.widget3d.scene.add_geometry("text", text_mesh, Material.default)

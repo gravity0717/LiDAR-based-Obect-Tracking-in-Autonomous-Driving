@@ -9,7 +9,6 @@ import time
 from geometry import Geometry
 from dataset import Dataset
 from sklearn.cluster import KMeans
-import hdbscan
 import matplotlib.pyplot as plt
 from utils import create_button, create_label
 from event import Event
@@ -125,6 +124,16 @@ class Vis:
                 app.post_to_main_thread(
                     self.window, lambda : self.geometry.draw_spline("right", right[0], right[1], right[2], color=[0, 0, 1])
                 )
+                
+                ### Number 
+                ids = range(4)
+                for id in ids:
+                    # Get pcd coordinate
+                    pcd_coord = np.asarray(pcd.points)[labels == id]
+                    centroid = np.mean(pcd_coord, axis=0)
+                    app.post_to_main_thread(
+                        self.window, lambda : self.geometry.add_text(centroid, f"ID : {id}")
+                    )
                 
                 ### Label update
                 self.label_voxel_size.text = f"Voxel size : {event.voxel_size}"
