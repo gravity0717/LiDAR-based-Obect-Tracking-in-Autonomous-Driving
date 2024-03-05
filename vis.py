@@ -12,6 +12,7 @@ from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 from utils import create_button, create_label
 from event import Event
+from association import Association 
 
 class Vis:
     def __init__(self):
@@ -19,6 +20,7 @@ class Vis:
     
     def run(self):
         app = gui.Application.instance
+        self.asso = Association()
         app.initialize()
         self.window = app.create_window(
             "Autonomous Driving Term Project", 1280, 720
@@ -38,7 +40,7 @@ class Vis:
         self.label_voxel_size = create_label("Voxel Size : ", self.panel)
         self.label_distance = create_label("Distance : ", self.panel)
         self.label_ground = create_label("Ground : ", self.panel)
-
+        self.lenght_of_label_id = create_label("The number of clusters: ", self.panel)
         self.window.add_child(self.panel)
         
         ### Widget
@@ -83,7 +85,9 @@ class Vis:
         while not event.loop_stop:
             self.dataset = Dataset("data/20220331T160645_ProjectData.mat")
             
-            for pcd, image, left, right, vel in self.dataset:
+            for t, (pcd, image, left, right, vel) in enumerate(self.dataset):
+    
+                    
                 if event.loop_stop:
                     break
 
@@ -124,22 +128,46 @@ class Vis:
                 app.post_to_main_thread(
                     self.window, lambda : self.geometry.draw_spline("right", right[0], right[1], right[2], color=[0, 0, 1])
                 )
+              
+                ### 대표점 계산 및 연관성 매칭
+                centroids = []
+                for i in range(max_label + 1):
+                    points_in_cluster = np.asarray(pcd.points)[labels == i]
+                    
+                    if len(points_in_cluster) > 0:
+                        centroid = points_in_cluster.mean(axis=0)
+                        centroids.append(centroid)
                 
-                ### Number 
-                ids = range(4)
-                for id in ids:
-                    # Get pcd coordinate
-                    pcd_coord = np.asarray(pcd.points)[labels == id]
-                    centroid = np.mean(pcd_coord, axis=0)
+                if t > 0:
+                    T = self.asso.registration(prev_pcd, pcd)
+                    self.asso.update_clusters(T, prev_centroids, centroids)
+                else:
+                    T = np.array([[1, 0, 0, 0],  
+                            [0, 1, 0, 0],
+                            [0, 0, 1, 0],
+                            [0, 0, 0, 1]])
+                    self.asso.update_clusters(T, [], centroids)
+                prev_centroids = centroids
+                prev_pcd = pcd
+                
+                ### Visaulize association 
+                for cluster_id, cluster in self.asso.clusters.items():
+                    centroid = cluster['centroid']
+                    age = cluster['age']
+                    
+                    color = plt.get_cmap("tab20")(cluster_id/(max_label if max_label > 0 else 1))
+                    color = color[:3]
+                    
+                    # ID 시각화 with add_text 
                     app.post_to_main_thread(
-                        self.window, lambda : self.geometry.add_text(centroid, f"ID : {id}")
+                        self.window, lambda : self.geometry.update_text(f"{cluster_id}", centroid, f"ID: {cluster_id}")
                     )
-                
+                    
                 ### Label update
                 self.label_voxel_size.text = f"Voxel size : {event.voxel_size}"
                 self.label_distance.text = f"Eps : {event.eps}"
                 self.label_ground.text = f"Ground : {event.ground}"
-                
+                self.lenght_of_label_id.text = f"The number of clusters: {max_label + 1}"
                 ### Time
                 time.sleep(0.05)
             

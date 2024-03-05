@@ -57,17 +57,24 @@ class Geometry:
         if self.widget3d.scene.has_geometry(name):
             self.widget3d.scene.remove_geometry(name)
     
-    def add_text(self, coord, text):
+    def update_text(self, name, coord, text):
+        self.remove_text(name)
         text_mesh = o3d.t.geometry.TriangleMesh.create_text(text, depth=0.1)    
-        
-        # Scale and transform the text : make it smaller and move it to the right position
-        text_mesh.scale(0.1, center=text_mesh.get_center())
+        text_mesh.scale(0.05, coord)
         
         # Check numpy is not empty 
         if np.any(coord):
-            text_mesh.translate(coord)  
-            # 90 degrees rotation around the z-axis
-            R = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]])
-            text_mesh.rotate(R, center=coord)
+            # text_mesh.translate(coord)  
+            # -90 degrees rotation around the z-axis
+            R = np.array([[0, 1, 0],
+              [-1, 0, 0],
+              [0, 0, 1]], dtype=np.float32)
+            R_tensor = o3d.core.Tensor(R, dtype=o3d.core.Dtype.Float32)
+            coord= o3d.core.Tensor(coord, dtype=o3d.core.Dtype.Float32)
+            text_mesh.rotate(R_tensor, coord)     
             
-        self.widget3d.scene.add_geometry("text", text_mesh, Material.default)
+        self.widget3d.scene.add_geometry(name, text_mesh, Material.default)
+        
+    def remove_text(self, name):
+        if self.widget3d.scene.has_geometry(name):
+            self.widget3d.scene.remove_geometry(name)
