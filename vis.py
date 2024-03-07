@@ -16,11 +16,10 @@ from association import Association
 
 class Vis:
     def __init__(self):
-        pass
-    
+        self.asso = Association()
+        
     def run(self):
         app = gui.Application.instance
-        self.asso = Association()
         app.initialize()
         self.window = app.create_window(
             "Autonomous Driving Term Project", 1280, 720
@@ -104,6 +103,10 @@ class Vis:
                 ### Voxel down sampling
                 pcd = pcd.voxel_down_sample(event.voxel_size)
                 
+                ### Filter pcd with xy-range 
+                points = np.array(np.asarray(pcd.points)[(np.abs(np.asarray(pcd.points)[:, 0]) < 50) & (np.abs(np.asarray(pcd.points)[:, 1]) < 5)])
+                pcd.points = o3d.utility.Vector3dVector(points)
+                
                 ### Clustering DBSCAN
                 labels = np.array(pcd.cluster_dbscan(eps=event.eps, min_points=5, print_progress=False))
                 max_label = labels.max()
@@ -154,13 +157,10 @@ class Vis:
                 for cluster_id, cluster in self.asso.clusters.items():
                     centroid = cluster['centroid']
                     age = cluster['age']
-                    
-                    color = plt.get_cmap("tab20")(cluster_id/(max_label if max_label > 0 else 1))
-                    color = color[:3]
-                    
+        
                     # ID 시각화 with add_text 
                     app.post_to_main_thread(
-                        self.window, lambda : self.geometry.update_text(f"{cluster_id}", centroid, f"ID: {cluster_id}")
+                        self.window, lambda : self.geometry.update_text(f"{cluster_id}", centroid, f"ID: {cluster_id}, Age: {age}")
                     )
                     
                 ### Label update
@@ -168,6 +168,7 @@ class Vis:
                 self.label_distance.text = f"Eps : {event.eps}"
                 self.label_ground.text = f"Ground : {event.ground}"
                 self.lenght_of_label_id.text = f"The number of clusters: {max_label + 1}"
+                
                 ### Time
                 time.sleep(0.05)
             

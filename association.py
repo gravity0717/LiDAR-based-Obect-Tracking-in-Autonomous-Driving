@@ -31,12 +31,9 @@ class Association:
                         new_clusters[cluster_id] = {'centroid': self.clusters[cluster_id]['centroid'], 
                                                     'age': self.clusters[cluster_id]['age'] + 1}
                     
-                    # Delete clusters over age 30
-                    if new_clusters[cluster_id]['age'] > 30:
-                        del new_clusters[cluster_id]    
-                    
-                        
-                        
+                    # Delete clusters over age 5
+                    if new_clusters[cluster_id]['age'] > 5:
+                        del new_clusters[cluster_id]        
                     
             # 새로 발견된 클러스터 처리
             existing_ids = set(new_clusters.keys())
@@ -45,7 +42,7 @@ class Association:
                 if i not in indices_table[:][1]:
                     new_clusters[next_id] = {'centroid': centroid, 'age': 0}
                     next_id += 1
-
+                    
             self.clusters = new_clusters
             
 
