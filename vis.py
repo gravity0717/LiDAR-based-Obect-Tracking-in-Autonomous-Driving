@@ -157,10 +157,10 @@ class Vis:
                 for cluster_id, cluster in self.asso.clusters.items():
                     centroid = cluster['centroid']
                     age = cluster['age']
-        
+                    
                     # ID 시각화 with add_text 
                     app.post_to_main_thread(
-                        self.window, lambda : self.geometry.update_text(f"{cluster_id}", centroid, f"ID: {cluster_id}, Age: {age}")
+                        self.window, lambda : self.geometry.update_text(str(cluster_id), centroid, f"ID: {cluster_id}, Age: {age}")
                     )
                     
                 ### Label update
@@ -171,7 +171,6 @@ class Vis:
                 
                 ### Time
                 time.sleep(0.05)
-            
             
         event.exit_thread = True
         print("thread done")
