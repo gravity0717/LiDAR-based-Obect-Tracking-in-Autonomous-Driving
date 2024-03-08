@@ -1,17 +1,17 @@
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
 import open3d as o3d
-
+from geometry import Geometry
 class Association:    
     def __init__(self):
         self.clusters = {}  # 클러스터의 ID와 Age를 저장
 
-    def update_clusters(self, T, prev_centroids, new_centroids):
+    def update_clusters(self, T, prev_centroids, new_centroids, geometry: Geometry):
         """
         이전과 현재 프레임의 클러스터 중심점을 기반으로 클러스터 정보를 업데이트합니다.
         """
         if not self.clusters:  # 첫 프레임의 경우
-            self.clusters = {i: {'centroid': centroid, 'age': 0} for i, centroid in enumerate(new_centroids)}
+            self.clusters = {id: {'centroid': centroid, 'age': 0} for id, centroid in enumerate(new_centroids)}
         else:
             # 연관성 매칭 수행
             indices_table = self.associate(T, prev_centroids, new_centroids)
@@ -31,9 +31,12 @@ class Association:
                         new_clusters[cluster_id] = {'centroid': self.clusters[cluster_id]['centroid'], 
                                                     'age': self.clusters[cluster_id]['age'] + 1}
                     
-                    # Delete clusters over age 5
-                    if new_clusters[cluster_id]['age'] > 5:
-                        del new_clusters[cluster_id]        
+                # Delete clusters over age older than 30 
+                if new_clusters[cluster_id]['age'] > 30 or new_idx >= len(new_centroids):
+                    del new_clusters[cluster_id]    
+                    
+                    # remove id from the scene
+                    geometry.remove_text(str(cluster_id))
                     
             # 새로 발견된 클러스터 처리
             existing_ids = set(new_clusters.keys())
@@ -47,7 +50,7 @@ class Association:
             
 
     def registration(self, src, tar):
-        threshold = 0.02 
+        threshold = 0.5
         T_init = np.array([[1, 0, 0, 0],  
                        [0, 1, 0, 0],
                        [0, 0, 1, 0],

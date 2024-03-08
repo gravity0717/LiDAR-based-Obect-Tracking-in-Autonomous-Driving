@@ -143,13 +143,13 @@ class Vis:
                 
                 if t > 0:
                     T = self.asso.registration(prev_pcd, pcd)
-                    self.asso.update_clusters(T, prev_centroids, centroids)
+                    self.asso.update_clusters(T, prev_centroids, centroids, self.geometry)
                 else:
                     T = np.array([[1, 0, 0, 0],  
                             [0, 1, 0, 0],
                             [0, 0, 1, 0],
                             [0, 0, 0, 1]])
-                    self.asso.update_clusters(T, [], centroids)
+                    self.asso.update_clusters(T, [], centroids, self.geometry)
                 prev_centroids = centroids
                 prev_pcd = pcd
                 
