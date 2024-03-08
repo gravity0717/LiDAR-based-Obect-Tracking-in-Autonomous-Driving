@@ -40,6 +40,7 @@ class Vis:
         self.label_distance = create_label("Distance : ", self.panel)
         self.label_ground = create_label("Ground : ", self.panel)
         self.lenght_of_label_id = create_label("The number of clusters: ", self.panel)
+        self.living_id = create_label("Living ID: ", self.panel)
         self.window.add_child(self.panel)
         
         ### Widget
@@ -168,6 +169,8 @@ class Vis:
                 self.label_distance.text = f"Eps : {event.eps}"
                 self.label_ground.text = f"Ground : {event.ground}"
                 self.lenght_of_label_id.text = f"The number of clusters: {max_label + 1}"
+                
+                self.living_id.text = f"Living ID: {[cluster_id for cluster_id in self.asso.clusters.keys()]}"
                 
                 ### Time
                 time.sleep(0.05)
