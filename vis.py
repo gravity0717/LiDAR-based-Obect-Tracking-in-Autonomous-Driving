@@ -151,6 +151,7 @@ class Vis:
                             [0, 0, 1, 0],
                             [0, 0, 0, 1]])
                     self.asso.update_clusters(T, [], centroids, self.geometry)
+                
                 prev_centroids = centroids
                 prev_pcd = pcd
                 
@@ -168,7 +169,7 @@ class Vis:
                 self.label_voxel_size.text = f"Voxel size : {event.voxel_size}"
                 self.label_distance.text = f"Eps : {event.eps}"
                 self.label_ground.text = f"Ground : {event.ground}"
-                self.lenght_of_label_id.text = f"The number of clusters: {max_label + 1}"
+                self.lenght_of_label_id.text = f"The number of clusters: {len(self.asso.clusters)}"
                 
                 self.living_id.text = f"Living ID: {[cluster_id for cluster_id in self.asso.clusters.keys()]}"
                 

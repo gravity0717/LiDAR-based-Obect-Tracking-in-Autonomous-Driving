@@ -58,7 +58,9 @@ class Geometry:
             self.widget3d.scene.remove_geometry(name)
     
     def update_text(self, name, coord, text):
+        
         self.remove_text(name)
+        
         text_mesh = o3d.t.geometry.TriangleMesh.create_text(text, depth=0.1)    
         text_mesh.scale(0.05, coord)
         
