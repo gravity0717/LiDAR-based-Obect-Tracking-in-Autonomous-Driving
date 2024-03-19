@@ -81,7 +81,8 @@ class Vis:
         # For concise
         app = gui.Application.instance        
         event = self.event
-
+        prev_centroids = None
+        
         while not event.loop_stop:
             self.dataset = Dataset("data/20220331T160645_ProjectData.mat")
             
@@ -142,15 +143,8 @@ class Vis:
                         centroid = points_in_cluster.mean(axis=0)
                         centroids.append(centroid)
                 
-                if t > 0:
-                    T = self.asso.registration(prev_pcd, pcd)
-                    self.asso.update_clusters(T, prev_centroids, centroids, self.geometry)
-                else:
-                    T = np.array([[1, 0, 0, 0],  
-                            [0, 1, 0, 0],
-                            [0, 0, 1, 0],
-                            [0, 0, 0, 1]])
-                    self.asso.update_clusters(T, [], centroids, self.geometry)
+                T = self.asso.registration(prev_pcd, pcd) if t > 0 else np.eye(4)
+                self.asso.update_clusters(T, prev_centroids, centroids, self.geometry) if prev_centroids is not None else None
                 
                 prev_centroids = centroids
                 prev_pcd = pcd
