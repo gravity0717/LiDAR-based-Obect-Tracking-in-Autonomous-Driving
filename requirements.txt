@@ -1,0 +1,6 @@
+opencv-python 
+open3d 
+scikit-learn
+filterpy 
+scipy 
+numpy  
