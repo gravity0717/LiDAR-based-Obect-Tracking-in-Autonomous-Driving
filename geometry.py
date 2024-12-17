@@ -2,6 +2,7 @@ import open3d as o3d
 import open3d.visualization.rendering as rendering
 from material import Material
 import numpy as np
+import time
 
 class Geometry:
     def __init__(self, widget3d):
@@ -56,17 +57,18 @@ class Geometry:
     def remove_geometry(self, name):
         if self.widget3d.scene.has_geometry(name):
             self.widget3d.scene.remove_geometry(name)
+            print(f"Removed geometry: {name}")  # 로그 추가
+        else:
+            print(f"Geometry {name} does not exist")  # 존재하지 않을 경우 로그
+
     
     def update_text(self, name, coord, text):
-        
-        self.remove_text(name)
-        
+        self.remove_text(name)  
         text_mesh = o3d.t.geometry.TriangleMesh.create_text(text, depth=0.1)    
-        text_mesh.scale(0.05, coord)
+        text_mesh.scale(0.2, coord)
         
         # Check numpy is not empty 
         if np.any(coord):
-            # text_mesh.translate(coord)  
             # -90 degrees rotation around the z-axis
             R = np.array([[0, 1, 0],
               [-1, 0, 0],
@@ -74,9 +76,11 @@ class Geometry:
             R_tensor = o3d.core.Tensor(R, dtype=o3d.core.Dtype.Float32)
             coord= o3d.core.Tensor(coord, dtype=o3d.core.Dtype.Float32)
             text_mesh.rotate(R_tensor, coord)     
-            
         self.widget3d.scene.add_geometry(name, text_mesh, Material.default)
         
     def remove_text(self, name):
         if self.widget3d.scene.has_geometry(name):
             self.widget3d.scene.remove_geometry(name)
+            print(f"Removed text: {name}")  # 로그 추가
+        else:
+            print(f"Text {name} does not exist")  # 존재하지 않을 경우 로그

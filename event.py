@@ -17,6 +17,7 @@ class Event:
         self.show_inlier = True
         self.show_outlier = False
         self.test = False
+        self.show_bbox = True
         
         ## Values
         self.eps = 0.5

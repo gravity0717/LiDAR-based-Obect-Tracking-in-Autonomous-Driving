@@ -1,74 +1,109 @@
 import numpy as np
-from sklearn.neighbors import NearestNeighbors
 import open3d as o3d
+from scipy.optimize import linear_sum_assignment
+from pprint import pprint 
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt 
+from Index_matcher import IndexMatcher
+from lap import lapjv
 
 class Association:
     def __init__(self):
-        self.clusters = {}  # 클러스터의 ID를 키로 사용하여 클러스터 정보를 저장
+        # self.kalman = KalmanTracker()
+        self.tracklets = {}  # 클러스터의 ID를 키로 사용하여 클러스터 정보를 저장
+        self.matched_clusters = {}  # 현재 지금 매칭된 클러스터를 저장 
         self.dead_index = []  # 클러스터의 ID를 저장하여 삭제할 클러스터를 추적
+        self.max_age = 1
+        
+        self.table = None 
+        self.prev_id = [] # cluster tracklet 중에서 바로 이전 prev_id 만을 가져오기 위해 저장 
+        self.history = {} # 클러스터 이력을 저장
+        self.cost_matrix = None
+        self.matcher = IndexMatcher()
+        
+    def calc_cost_matrix(self, prev_centroids, curr_centroids): 
+        """
+        두 프레임 간의 모든 클러스터 쌍에 대한 비용 행렬을 반환
+        이때, 비용은 두 클러스터의 거리로 정의
+        """
+        cost_matrix = np.zeros((len(prev_centroids), len(curr_centroids)))
 
-    def registration(self, src, tar):
-        threshold = 0.5
-        T_init = np.array([[1, 0, 0, 0],  
-                           [0, 1, 0, 0],
-                           [0, 0, 1, 0],
-                           [0, 0, 0, 1]])
+        for i, prev_centroid in enumerate(prev_centroids):
+            for j, curr_centroid in enumerate(curr_centroids):
+                cost_matrix[i, j] = np.linalg.norm(prev_centroid - curr_centroid) # L2 distance
+        self.cost_matrix = cost_matrix
+        return cost_matrix
+
+    def associate(self, cost_matrix, thresh = 100):
+        """
+            비용 행렬을 입력으로 받아 최소 비용 할당을 반환
+            헝가리안 알고리즘을 사용
+        """ 
+        if cost_matrix.size == 0:
+            return np.empty((0, 2), dtype=int), tuple(range(cost_matrix.shape[0])), tuple(range(cost_matrix.shape[1]))
+        matches, unmatched_a, unmatched_b = [], [], []
+        cost, x, y = lapjv(cost_matrix, extend_cost=True, cost_limit=thresh) # x[i]: i번째 행이 x[i] 열과 매칭됨
+        for ix, mx in enumerate(x):
+            if mx >= 0:
+                matches.append([ix, mx])
+        unmatched_a = np.where(x < 0)[0]
+        unmatched_b = np.where(y < 0)[0]
+        matches = np.asarray(matches)
+        return matches, unmatched_a, unmatched_b
+
+    def table_id_to_cluster_id(self, id_matcher, table_id):
+        """
+            헝가리안 알고리즘을 통해 매칭된 클러스터 ID를 반환
+        """
+        for id, prev_id in id_matcher:
+            if id == table_id:
+                return prev_id
+        return None
         
-        reg_p2p = o3d.pipelines.registration.registration_icp(
-            src, tar, threshold, T_init,
-            o3d.pipelines.registration.TransformationEstimationPointToPoint())
-       
-        return reg_p2p.transformation
-    
-    def associate(self, transformation_matrix, prev_centroids, curr_centroids):
-        moved_centroids = np.array([transformation_matrix @ np.hstack((prev_centroid, 1))
-                                    for prev_centroid in prev_centroids])
-        moved_centroids = moved_centroids[:, :3]
-        neigh = NearestNeighbors(n_neighbors=1).fit(moved_centroids)
-        
-        closest_indices = np.array([neigh.kneighbors(curr_centroid.reshape(1, -1), return_distance=False)
-                                    for curr_centroid in curr_centroids]).flatten()
-        
-        indices_table = list(zip(closest_indices, range(len(curr_centroids))))
-        # indices_table = list(zip(range(len(prev_centroids), closest_indices)))
-        return indices_table
-        
-    def update_clusters(self, T, prev_centroids, curr_centroids, geometry):
-        if not self.clusters:  # 첫 프레임의 경우
-            self.clusters = {id: {'centroid': centroid, 'age': 0} for id, centroid in enumerate(curr_centroids)}
+    def update_clusters(self, curr_centroids):
+        if not self.tracklets:  # 첫 프레임의 경우
+            self.tracklets = {id: {'centroid': centroid, 'age': 0} for id, centroid in enumerate(curr_centroids)}
+            
         else:
-            unmatched_indices = list(self.clusters.keys())
-            matched_indices = []
-            untracked_indices = set(range(len(curr_centroids)))
-            
-            table = self.associate(T, prev_centroids, curr_centroids)
-            table = sorted(table, key=lambda x: x[0])
-            
-            for i, j in table:
-                if i in unmatched_indices:
-                    matched_indices.append(i)
-                    unmatched_indices.remove(i)
-                    untracked_indices.remove(j)
-                    self.clusters[i]['centroid'] = curr_centroids[j]
+            for id in self.tracklets.keys():
+                if self.tracklets[id]['age'] >= self.max_age:
+                    self.dead_index.append(id)
                     
-            # 새 클러스터에 대한 ID 할당
-            next_id = max(self.clusters.keys()) + 1 if self.clusters else 0
-            for u in untracked_indices:
-                self.clusters[next_id] = {'centroid': curr_centroids[u], 'age': 0}
-                next_id += 1
-                
-            # 'age'가 임계값 이상인 클러스터 처리
-            for u in unmatched_indices:
-                self.clusters[u]['age'] += 1
-            
-            # 화면에서 제거해야 할 클러스터 삭제
-            to_remove = [id for id, cluster in self.clusters.items() if cluster['age'] >= 10]
-            for id in to_remove:
-                geometry.remove_text(str(id))
-                del self.clusters[id]
-            
-            # 업데이트 또는 화면에 표시
-            for cluster_id, cluster in self.clusters.items():
-                if cluster['age'] < 10:
-                    geometry.update_text(str(cluster_id), cluster['centroid'], f"ID: {cluster_id}, Age: {cluster['age']}")
+            for id in self.dead_index:
+                if id in list(self.tracklets.keys()):
+                    _ = self.tracklets.pop(id)   
+       
+            prev_centroids = [self.tracklets[id]['centroid'] for id in self.tracklets.keys()]
+            self.matcher.set_tracklet_index([id for id in self.tracklets.keys()])
+            self.matcher.set_match()
+        
+            self.calc_cost_matrix(prev_centroids, curr_centroids)
+            matched_indices, unmatched_indices, untracked_indices = self.associate(self.cost_matrix)
+
+            for t_i, j in matched_indices:
+                i = self.matcher.convert_table2tracklet(t_i) # taeble indx 와 tracklet index 는 다르다 
+                self.tracklets[i]['centroid'] = curr_centroids[j]
+                self.tracklets[i]['age'] = 0  # 갱신된 클러스터의 age 리셋
+
+                    
+            if len(unmatched_indices):    
+                for t_u in unmatched_indices:
+                    u = self.matcher.convert_table2tracklet(t_u) 
+                    self.tracklets[u]['age'] += 1
+                    
+            # 새 클러스터 추가
+            if len(untracked_indices):
+                next_id = max(self.tracklets.keys(), default=0) + 1  # 비어 있을 경우 대비
+                for u in untracked_indices:
+                    self.tracklets[next_id] = {'centroid': curr_centroids[u], 'age': 0}
+                  
+                    
+                    
+        # record history along ID 
+        for i, cluster in self.tracklets.items():
+            if i not in self.history:
+                self.history[i] = []
+            self.history[i].append(cluster)        
+
+
 

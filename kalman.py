@@ -4,7 +4,7 @@ from filterpy.common import Q_discrete_white_noise
 
 class KalmanTracker:
     def __init__(self):
-        self.ekf = ExtendedKalmanFilter(dim_x=5, dim_z=2) # state = [x,y,theta,v,w] v,w: anlge velocity
+        self.ekf = ExtendedKalmanFilter(dim_x=5, dim_z=2) # state = [x,y,theta,v,w] v,w: anlge velocity 
         self.ekf.x = np.array([0., 0., 0., 1., 0.1])  # 초기 위치, 각도, 선속도, 각속도
         # 초기 상태 및 코변서 설정
         self.ekf.P *= 10.  # 초기 추정 오차 공분산
@@ -15,6 +15,9 @@ class KalmanTracker:
         ekf.Q = Q_discrete_white_noise(dim=2, dt=self.dt, var=0.01, block_size=2, order_by_dim=False)
         self.history = []
 
+    def pcd2state(pcd:np.ndarray):
+        x,y,_ = pcd
+    def state2pcd(state):
     def fx(self, state, dt):
         x, y, theta, v, w = state.flatten()
         vt, wt = v * dt, w * dt

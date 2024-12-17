@@ -36,10 +36,10 @@ class Vis:
         self.input_color_image = gui.ImageWidget()
         self.panel.add_child(self.input_color_image)
         
-        # buttons
+        ### buttons
         self.btn_show_axes = create_button("Show axes", (0.1, 1.5), True, None, self.panel)
         
-        # labels
+        ### labels
         self.label_voxel_size = create_label("Voxel Size : ", self.panel)
         self.label_distance = create_label("Distance : ", self.panel)
         self.label_ground = create_label("Ground : ", self.panel)
@@ -140,27 +140,38 @@ class Vis:
                             self.window, lambda : self.geometry.draw_spline("right", right[0], right[1], right[2], color=[0, 0, 1])
                         )
                         
-                        ### Bounding box
+                        ### Bounding box와 cluster 정보 수집
                         centroids = []
+                        bbox_info = []
                         for i in range(max_label + 1):
                             cluster = pcd.select_by_index(np.where(labels == i)[0])      
                             bbox = cluster.get_axis_aligned_bounding_box()                                         
                             centroid = bbox.get_center()
                             centroids.append(centroid)
+                            bbox_info.append((i, bbox))
                             
-                            # Bounding box update
-                            app.post_to_main_thread(
-                                self.window, lambda i=i, bbox=bbox: self.geometry.update_geometry(f"bbox_{i}", bbox, event.show_bbox)
-                            )
+                        ### app.post_to_main_thread에서 한 번에 업데이트
+                        def update_all_geometry_and_text(bbox_info, tracklets):
+                            # Bounding box 업데이트
+                            for i, bbox in bbox_info:
+                                self.geometry.update_geometry(f"bbox_{i}", bbox, event.show_bbox)
                             
-                        ### Updates clusters     
-                        self.asso.update_clusters(centroids)               
-                        for cluster_id, cluster in self.asso.tracklets.items():
-                            app.post_to_main_thread(
-                                self.window, lambda cluster_id=cluster_id, cluster=cluster: self.geometry.update_text(str(cluster_id), cluster['centroid'], f"ID: {cluster_id}, Age: {cluster['age']}")
+                            # 클러스터 ID 업데이트
+                            for cluster_id, cluster in tracklets.items():
+                                self.geometry.update_text(
+                                    str(cluster_id), 
+                                    cluster['centroid'], 
+                                    f"ID: {cluster_id}, Age: {cluster['age']}"
                                 )
-                        
-                        
+
+                        ### Updates clusters     
+                        self.asso.update_clusters(centroids)
+                    
+                        app.post_to_main_thread(
+                            self.window, 
+                            lambda: update_all_geometry_and_text(bbox_info, self.asso.tracklets)
+                        )
+                                                
                         ### Label update
                         self.label_voxel_size.text = f"Voxel size : {event.voxel_size}"
                         self.label_distance.text = f"Eps : {event.eps}"
