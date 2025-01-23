@@ -1,20 +1,18 @@
 import cv2
 import numpy as np
 import open3d as o3d
+import matplotlib.pyplot as plt
+from scipy import io
 import open3d.visualization.gui as gui
 import open3d.visualization.rendering as rendering
 import threading
-from scipy import io
 import time
-from geometry import Geometry
-from dataset import Dataset
-import matplotlib.pyplot as plt
-from utils import create_button, create_label
-from event import Event
-from association import Association 
-from logger import get_logger
-import threading    
-
+from src.geometry import Geometry
+from src.dataset import Dataset
+from src.utils import create_button, create_label
+from src.event import Event
+from src.association import Association 
+from src.logger import get_logger
 
 class Vis:
     def __init__(self):
@@ -44,7 +42,6 @@ class Vis:
         self.label_distance = create_label("Distance : ", self.panel)
         self.label_ground = create_label("Ground : ", self.panel)
         self.label_frame_number = create_label("Frame: ", self.panel)
-        self.label_tracklet_length = create_label("Tracked Cars:", self.panel)
         self.window.add_child(self.panel)
         
         ### Widget
@@ -146,7 +143,7 @@ class Vis:
                             cluster = pcd.select_by_index(np.where(labels == i)[0])      
                             bbox = cluster.get_axis_aligned_bounding_box()                                         
                             centroid = bbox.get_center()
-                            centroids.append(centroid)
+                            centroids.append(centroid[:2])
                             
                             # Bounding box update
                             app.post_to_main_thread(
@@ -155,23 +152,29 @@ class Vis:
                             
                         ### Updates clusters     
                         self.asso.update_clusters(centroids)               
-                        for cluster_id, cluster in self.asso.tracklets.items():
+                        for cluster_id, cluster in self.asso.living_track.items():
                             app.post_to_main_thread(
-                                self.window, lambda cluster_id=cluster_id, cluster=cluster: self.geometry.update_text(str(cluster_id), cluster['centroid'], f"ID: {cluster_id}, Age: {cluster['age']}")
+                                self.window, lambda cluster_id=cluster_id, cluster=cluster: self.geometry.update_text(str(cluster_id), cluster['centroid'], f"ID: {cluster_id}, Age: {cluster['age']}, V:{cluster['tracker'].ekf.x[3][0]:.2f} m/s")
                                 )
                         
+                        ### Remove suspended id
+                        suspended = self.asso.tracklets.keys() - self.asso.living_track.keys()
+                        if len(suspended):
+                            for  s in suspended:
+                                app.post_to_main_thread(
+                                    self.window, lambda s = s: self.geometry.remove_geometry(str(s))
+                                    )
                         
                         ### Label update
                         self.label_voxel_size.text = f"Voxel size : {event.voxel_size}"
                         self.label_distance.text = f"Eps : {event.eps}"
                         self.label_ground.text = f"Ground : {event.ground}"
                         self.label_frame_number.text = f"Frame : {frame}"
-                        self.label_tracklet_length.text= f"tracked Cars : {len(self.asso.tracklets)}"
                         frame += 1 
 
                         ### Time
                         time.sleep(0.05)
-                        
+
         except Exception as e:
             self.logger.error("Error occurred", exc_info=True)
             event.loop_stop = True
