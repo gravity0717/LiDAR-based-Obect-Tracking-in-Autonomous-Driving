@@ -35,5 +35,5 @@ docker run -it --rm  -v /path/to/KiTTi:/workspace/kitti -v /tmp/.X11-unix:/tmp/.
     호스트 머신의 KITTI 데이터셋 디렉토리를 컨테이너와 공유 (예: `/path/to/kitti:/workspace/kitti`).
 
 
-- [x] **Open3d headless 설정 구현:**
+- [ ] **Open3d headless 설정 구현:**
     docker container 상에서 open3d를 돌리려 하니 너무 느리다.
