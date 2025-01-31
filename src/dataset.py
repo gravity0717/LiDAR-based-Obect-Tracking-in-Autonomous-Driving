@@ -2,10 +2,11 @@ from scipy import io
 import numpy as np
 import open3d as o3d
 import pykitti
+import os 
 
 class Dataset:
-    def __init__(self, mat_path):
-        if mat_path:
+    def __init__(self, mat_path=" "):
+        if os.path.exists(mat_path):
             self.datas = io.loadmat(mat_path)
         self.cur = 0
     
@@ -48,10 +49,10 @@ class Dataset:
 class KITTI(Dataset):
     def __init__(self):
         super().__init__()
-        basedir = '/home/poseidon/workspace/dataset/KITTI/raw'
-        date   = "2011_09_26"
-        drive  = "0018"
-        datas = pykitti.raw(basedir, date, drive)
+        self.basedir = '/workspace/kitti'
+        self.date    = "2011_09_26"
+        self.drive   = "0018"
+        self.datas   = pykitti.raw(self.basedir, self.date, self.drive)
 
     def __len__(self):
         return len(list(self.datas.velo))
@@ -61,15 +62,16 @@ class KITTI(Dataset):
         if self.cur >= len(self):
             raise StopIteration
         
-        x, y, z, reflectance  = self.datas.velo[self.cur] #Note) Reflectance: 반사 강도 
-        image = self.datas.cam2[self.cur]
-
-        xyz = np.vstack([x, y, z])
-        
-        pcd = o3d.geometry.PointCloud()
+        # LiDAR 
+        velo_pts   = next(self.datas.velo) #Note) Reflectance: 반사 강도 
+        x, y, z, reflectance = velo_pts[:, 0], velo_pts[:, 1], velo_pts[:, 2], velo_pts[:, 3]
+        xyz        = np.vstack([x, y, z])
+        pcd        = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(xyz.T)
-        
-        o3d_image = o3d.geometry.Image(image)
+
+        # Image 
+        image      = next(iter(self.datas.cam2))
+        o3d_image  = o3d.geometry.Image(np.asarray(image))
     
         return pcd, o3d_image
     

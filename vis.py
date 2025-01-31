@@ -8,7 +8,7 @@ import open3d.visualization.rendering as rendering
 import threading
 import time
 from src.geometry import Geometry
-from src.dataset import Dataset
+from src.dataset import Dataset, KITTI
 from src.utils import create_button, create_label
 from src.event import Event
 from src.association import Association 
@@ -88,10 +88,12 @@ class Vis:
         frame = 0 
         try:
             while not event.loop_stop:
-                self.dataset = Dataset("data/20220331T160645_ProjectData.mat")
+                # self.dataset = Dataset("data/20220331T160645_ProjectData.mat")
+                self.dataset = KITTI()
                 with self.lock:
-                    for t, (pcd, image, left, right, vel) in enumerate(self.dataset):
-            
+                    for t, frame_info in enumerate(self.dataset):
+                        # (pcd, image, left, right, vel)  = frame_info
+                        pcd, image                      = frame_info
                         if event.loop_stop:
                             break
 
@@ -129,13 +131,13 @@ class Vis:
                             self.window, lambda : self.input_color_image.update_image(image)
                         )
             
-                        ### Lines
-                        app.post_to_main_thread(
-                            self.window, lambda : self.geometry.draw_spline("left", left[0], left[1], left[2], color=[0, 1, 0])
-                        )
-                        app.post_to_main_thread(
-                            self.window, lambda : self.geometry.draw_spline("right", right[0], right[1], right[2], color=[0, 0, 1])
-                        )
+                        # ### Lines
+                        # app.post_to_main_thread(
+                        #     self.window, lambda : self.geometry.draw_spline("left", left[0], left[1], left[2], color=[0, 1, 0])
+                        # )
+                        # app.post_to_main_thread(
+                        #     self.window, lambda : self.geometry.draw_spline("right", right[0], right[1], right[2], color=[0, 0, 1])
+                        # )
                         
                         ### Bounding box
                         centroids = []

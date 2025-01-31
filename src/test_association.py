@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from association import Association
+from src.association import Association
 
 def generate_mock_data(frame_num, cluster_count, noise_level=0.5):
     """
