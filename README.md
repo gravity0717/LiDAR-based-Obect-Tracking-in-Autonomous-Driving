@@ -14,6 +14,14 @@ python vis.py
 ### Demo 
 ![demo](asset/demo.gif)
 
+### run Docker 
+
+```bash 
+cd path/to/here 
+docker build -t docker-name .
+
+docker run -it --rm  -v /path/to/KiTTi:/workspace/kitti -v /tmp/.X11-unix:/tmp/.X11-unix --volume="$HOME/.Xauthority:/root/.Xauthority:rw"   -e DISPLAY=$DISPLAY   -e XDG_RUNTIME_DIR=/tmp --net=host docker-name 
+```
 
 ### TODO
 
